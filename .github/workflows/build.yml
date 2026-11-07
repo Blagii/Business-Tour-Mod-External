@@ -1,0 +1,66 @@
+name: Build Windows Release
+
+on:
+  push:
+    branches:
+      - arena/a1babb06-business-tour-mod-external
+    paths-ignore:
+      - 'build-output/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: arena/a1babb06-business-tour-mod-external
+
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Ensure .NET Framework 4.7.2 targeting pack
+        run: choco install netfx-4.7.2-devpack -y --no-progress
+        continue-on-error: true
+
+      - name: Restore packages.config (best effort, packages are vendored)
+        shell: pwsh
+        run: |
+          nuget restore BusinessTourMod.sln -NonInteractive
+          if ($LASTEXITCODE -ne 0) { Write-Host "NuGet restore skipped/failed; using vendored packages/ folder"; exit 0 }
+        continue-on-error: true
+
+      - name: Build Release
+        shell: pwsh
+        run: |
+          msbuild BusinessTourMod.sln /m /v:minimal /p:Configuration=Release '/p:Platform=Any CPU'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Collect binaries
+        shell: pwsh
+        run: |
+          if (-not (Test-Path bin\Release\BusinessTourMod.exe)) { throw "Build did not produce BusinessTourMod.exe" }
+          New-Item -ItemType Directory -Force -Path build-output | Out-Null
+          Get-ChildItem bin\Release -File | ForEach-Object { Copy-Item $_.FullName -Destination build-output -Force }
+          $hash = (Get-FileHash build-output\BusinessTourMod.exe -Algorithm SHA256).Hash
+          "Built on windows-2022 with MSBuild, Configuration=Release, Platform=Any CPU`r`nBusinessTourMod.exe SHA256: $hash`r`nCommit: $env:GITHUB_SHA" | Set-Content build-output\BUILD_INFO.txt
+          Compress-Archive -Path build-output\* -DestinationPath build-output\BusinessTourMod-Release.zip -Force
+          Get-ChildItem build-output | Select-Object Name, Length | Format-Table -AutoSize
+
+      - name: Publish binaries back to the branch
+        shell: pwsh
+        run: |
+          git config user.name "arena-build"
+          git config user.email "arena-build@users.noreply.github.com"
+          git add -f build-output
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "No binary changes to commit"
+          } else {
+            git commit -m "ci: publish Windows Release build [skip ci]"
+          }
+          git push origin "HEAD:arena/a1babb06-business-tour-mod-external"

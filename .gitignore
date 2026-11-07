@@ -1,0 +1,8 @@
+# Build intermediates / local IDE files
+bin/
+obj/
+.vs/
+*.suo
+*.user.osscache
+
+# Keep the CI-produced release binaries in build-output/ tracked.
