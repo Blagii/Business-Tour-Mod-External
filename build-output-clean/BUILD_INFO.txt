@@ -1,0 +1,4 @@
+Built on windows-2022 with MSBuild, Configuration=Release, Platform=Any CPU
+Variant: CLEAN (CLEAN_BUILD symbol defined)
+BusinessTourMod.exe SHA256: FC9347606C43D1FB7CABA23B06F5D36794314C9C50D0D1946E4E71D1DD9DA701
+Commit: 1c93d7e52aa82c822484aa7d3ef6d63cc4bdb7d7
