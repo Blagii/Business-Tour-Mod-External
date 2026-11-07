@@ -6,6 +6,7 @@ on:
       - arena/a1babb06-business-tour-mod-external
     paths-ignore:
       - 'build-output/**'
+      - 'build-output-clean/**'
   workflow_dispatch:
 
 permissions:
@@ -34,33 +35,74 @@ jobs:
           if ($LASTEXITCODE -ne 0) { Write-Host "NuGet restore skipped/failed; using vendored packages/ folder"; exit 0 }
         continue-on-error: true
 
-      - name: Build Release
+      # ---------- Variant 1: original, unmodified behaviour ----------
+      - name: Build Release (original)
         shell: pwsh
         run: |
           msbuild BusinessTourMod.sln /m /v:minimal /p:Configuration=Release '/p:Platform=Any CPU'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Collect binaries
+      - name: Collect original binaries
         shell: pwsh
         run: |
           if (-not (Test-Path bin\Release\BusinessTourMod.exe)) { throw "Build did not produce BusinessTourMod.exe" }
-          New-Item -ItemType Directory -Force -Path build-output | Out-Null
-          Get-ChildItem bin\Release -File | ForEach-Object { Copy-Item $_.FullName -Destination build-output -Force }
-          $hash = (Get-FileHash build-output\BusinessTourMod.exe -Algorithm SHA256).Hash
-          "Built on windows-2022 with MSBuild, Configuration=Release, Platform=Any CPU`r`nBusinessTourMod.exe SHA256: $hash`r`nCommit: $env:GITHUB_SHA" | Set-Content build-output\BUILD_INFO.txt
-          Compress-Archive -Path build-output\* -DestinationPath build-output\BusinessTourMod-Release.zip -Force
-          Get-ChildItem build-output | Select-Object Name, Length | Format-Table -AutoSize
+          $out = 'build-output'
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          Get-ChildItem $out -File | Remove-Item -Force
+          Get-ChildItem bin\Release -File | ForEach-Object { Copy-Item $_.FullName -Destination $out -Force }
+          $hash = (Get-FileHash "$out\BusinessTourMod.exe" -Algorithm SHA256).Hash
+          "Built on windows-2022 with MSBuild, Configuration=Release, Platform=Any CPU`r`nVariant: ORIGINAL (whitelist + anti-debug included)`r`nBusinessTourMod.exe SHA256: $hash`r`nCommit: $env:GITHUB_SHA" | Set-Content "$out\BUILD_INFO.txt"
+          Compress-Archive -Path "$out\*" -DestinationPath "$out\BusinessTourMod-Release.zip" -Force
+          Get-ChildItem $out | Select-Object Name, Length | Format-Table -AutoSize
+
+      # ---------- Variant 2: no network whitelist, no anti-debug ----------
+      - name: Build Release (CLEAN_BUILD)
+        shell: pwsh
+        run: |
+          msbuild BusinessTourMod.sln /t:Rebuild /m /v:minimal /p:Configuration=Release '/p:Platform=Any CPU' /p:DefineConstants=CLEAN_BUILD
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Collect clean binaries
+        shell: pwsh
+        run: |
+          if (-not (Test-Path bin\Release\BusinessTourMod.exe)) { throw "Clean build did not produce BusinessTourMod.exe" }
+          $out = 'build-output-clean'
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          Get-ChildItem $out -File | Remove-Item -Force
+          Get-ChildItem bin\Release -File | ForEach-Object { Copy-Item $_.FullName -Destination $out -Force }
+          $hash = (Get-FileHash "$out\BusinessTourMod.exe" -Algorithm SHA256).Hash
+          "Built on windows-2022 with MSBuild, Configuration=Release, Platform=Any CPU`r`nVariant: CLEAN (CLEAN_BUILD symbol defined)`r`nBusinessTourMod.exe SHA256: $hash`r`nCommit: $env:GITHUB_SHA" | Set-Content "$out\BUILD_INFO.txt"
+          "Business Tour Mod - CLEAN build`r`n================================`r`nCompiled with the CLEAN_BUILD symbol. Removed at compile time:`r`n  * the SteamID whitelist HTTP request to goguardian.ml (Program.cs)`r`n  * the anti-debug / anti-analysis background worker (SecurityChecks.cs, GUI.cs, Designer.cs)`r`nEverything else (WinForms UI, memory reading/writing) is unchanged.`r`nThe original, unmodified build is in ..\build-output.`r`nRequires Windows + .NET Framework 4.7.2 + a running BusinessTour game." | Set-Content "$out\README.txt"
+          Compress-Archive -Path "$out\*" -DestinationPath "$out\BusinessTourMod-Clean-Release.zip" -Force
+          Get-ChildItem $out | Select-Object Name, Length | Format-Table -AutoSize
+
+      - name: Verify the two variants differ as intended
+        shell: pwsh
+        run: |
+          function Get-Utf16Strings([string]$path) {
+            $b = [System.IO.File]::ReadAllBytes($path)
+            return ([System.Text.Encoding]::Unicode.GetString($b) +
+                    [System.Text.Encoding]::Unicode.GetString($b, 1, $b.Length - 1))
+          }
+          $original = Get-Utf16Strings 'build-output\BusinessTourMod.exe'
+          $clean    = Get-Utf16Strings 'build-output-clean\BusinessTourMod.exe'
+          foreach ($s in @('goguardian.ml', 'registeredIDs.txt', 'steam_api.dll', 'DnSpy', 'GameConqueror')) {
+            if ($clean.Contains($s)) { throw "CLEAN build still contains '$s'" }
+          }
+          if (-not $original.Contains('goguardian.ml')) { throw "ORIGINAL build is missing the whitelist URL" }
+          if (-not $original.Contains('DnSpy')) { throw "ORIGINAL build is missing the anti-debug list" }
+          Write-Host "OK: clean build has no whitelist/anti-debug code; original build still has both."
 
       - name: Publish binaries back to the branch
         shell: pwsh
         run: |
           git config user.name "arena-build"
           git config user.email "arena-build@users.noreply.github.com"
-          git add -f build-output
+          git add -f build-output build-output-clean
           git diff --cached --quiet
           if ($LASTEXITCODE -eq 0) {
             Write-Host "No binary changes to commit"
           } else {
-            git commit -m "ci: publish Windows Release build [skip ci]"
+            git commit -m "ci: publish original + clean Windows Release builds [skip ci]"
           }
           git push origin "HEAD:arena/a1babb06-business-tour-mod-external"

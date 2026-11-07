@@ -11,7 +11,9 @@ namespace BusinessTourMod
         private void Form1_Load(object sender, EventArgs e)
         {
             UpdateAddress.RunWorkerAsync();
+#if !CLEAN_BUILD
             CheckDebugger.RunWorkerAsync();
+#endif
             UpdateValues.RunWorkerAsync();
             UpdateColor.RunWorkerAsync();
         }

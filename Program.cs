@@ -1,13 +1,15 @@
 ﻿using System;
+using System.Windows.Forms;
+#if !CLEAN_BUILD
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Windows.Forms;
 using System.Diagnostics;
 using Memory;
 using System.IO;
 using System.Net;
 using System.Security.Cryptography;
+#endif
 
 namespace BusinessTourMod
 {
@@ -20,6 +22,7 @@ namespace BusinessTourMod
         [STAThread]
         static void Main()
         {
+#if !CLEAN_BUILD
             int BaseAddress = 0;
 
             var targetProcess = Process.GetProcessesByName("BusinessTour").FirstOrDefault();
@@ -81,6 +84,7 @@ namespace BusinessTourMod
                 MessageBox.Show("Debug : " + PlayerSteamID);
                 return;
             }
+#endif
 
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
