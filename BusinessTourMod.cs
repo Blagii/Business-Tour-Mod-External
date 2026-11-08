@@ -17,22 +17,37 @@ namespace BusinessTourMod
 
         public BusinessTourMod()
         {
+            // Always build the UI first. The original code returned before this
+            // call when the game was missing, which produced a blank / invisible
+            // window and made it look like "nothing started".
+            InitializeComponent();
+
             Process TargetProcess = Process.GetProcessesByName("BusinessTour").FirstOrDefault();
             if (TargetProcess == null)
             {
-                MessageBox.Show(@"Can't find Business Tour, please open the game");
+                _BaseAddress = 0;
+                SetStatusText("Igra nije pokrenuta - pokreni Business Tour, pa restartuj mod");
                 return;
             }
-            ProcessModuleCollection Modules = TargetProcess.Modules;
 
-            foreach (ProcessModule Procmodule in Modules)
+            foreach (ProcessModule Procmodule in TargetProcess.Modules)
             {
                 if ("GameAssembly.dll" == Procmodule.ModuleName)
                 {
-                    _BaseAddress = (int)Procmodule.BaseAddress;
+                    long raw = Procmodule.BaseAddress.ToInt64();
+                    if (raw > uint.MaxValue)
+                    {
+                        SetStatusText("Igra je 64-bitna - ovaj mod radi samo sa 32-bitnim adresama");
+                        _BaseAddress = 0;
+                        return;
+                    }
+                    _BaseAddress = unchecked((int)(uint)raw);
                 }
             }
-            InitializeComponent();
+
+            SetStatusText(_BaseAddress != 0
+                ? "Povezano sa igrom (GameAssembly.dll)"
+                : "GameAssembly.dll nije pronadjen u procesu igre");
         }
 
         private void InfiniteJail_Click(object sender, EventArgs e)

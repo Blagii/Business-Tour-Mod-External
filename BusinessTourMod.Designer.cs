@@ -172,7 +172,9 @@
             // 
             // CheckDebugger
             // 
+#if !CLEAN_BUILD
             this.CheckDebugger.DoWork += new System.ComponentModel.DoWorkEventHandler(this.CheckDebugger_DoWork);
+#endif
             // 
             // UpdateValues
             // 

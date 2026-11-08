@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if !CLEAN_BUILD
+using System;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows.Forms;
@@ -42,3 +43,4 @@ namespace BusinessTourMod
         }
     }
 }
+#endif

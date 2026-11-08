@@ -1,0 +1,4 @@
+Built on windows-2022 with MSBuild, Configuration=Release, Platform=Any CPU
+Variant: ORIGINAL (whitelist + anti-debug included)
+BusinessTourMod.exe SHA256: D96797F81EACCBDC6CE796070D615E240BC4D399DE4CA2920DBF3AC2D51F6240
+Commit: 7a5bc35055670149fff49fc9e79b214bdb03ab7f
