@@ -10,12 +10,41 @@ namespace BusinessTourMod
     {
         private void Form1_Load(object sender, EventArgs e)
         {
-            UpdateAddress.RunWorkerAsync();
+            // BackgroundWorker swallows exceptions in DoWork; log them instead of
+            // letting the tool look like it "started but does nothing".
+            UpdateAddress.RunWorkerCompleted += WorkerError;
+            UpdateValues.RunWorkerCompleted += WorkerError;
+            UpdateColor.RunWorkerCompleted += WorkerError;
 #if !CLEAN_BUILD
-            CheckDebugger.RunWorkerAsync();
+            CheckDebugger.RunWorkerCompleted += WorkerError;
 #endif
-            UpdateValues.RunWorkerAsync();
-            UpdateColor.RunWorkerAsync();
+
+            StartWorker(UpdateAddress);
+#if !CLEAN_BUILD
+            StartWorker(CheckDebugger);
+#endif
+            StartWorker(UpdateValues);
+            StartWorker(UpdateColor);
+        }
+
+        private static void StartWorker(BackgroundWorker worker)
+        {
+            try
+            {
+                worker.RunWorkerAsync();
+            }
+            catch (Exception ex)
+            {
+                Program.LogError(ex);
+            }
+        }
+
+        private static void WorkerError(object sender, RunWorkerCompletedEventArgs e)
+        {
+            if (e.Error != null)
+            {
+                Program.LogError(e.Error);
+            }
         }
 
         private void trackBar1_Scroll(object sender, EventArgs e)

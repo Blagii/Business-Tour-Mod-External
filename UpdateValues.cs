@@ -12,6 +12,19 @@ namespace BusinessTourMod
         {
             while (true)
             {
+                // Live diagnosis: show in the UI why nothing is happening.
+                try
+                {
+                    IntPtr handle = Memory.GetProcessHandle();
+                    SetStatusText(handle != IntPtr.Zero
+                        ? "Povezano sa igrom (base 0x" + _BaseAddress.ToString("X") + ")"
+                        : "Nema procesa 'BusinessTour' ili pristup odbijen (Win32 " + Memory.LastWin32Error + ")");
+                }
+                catch (Exception ex)
+                {
+                    Program.LogError(ex);
+                }
+
                 {
                     //Money Address
                     int Pointer = Memory.GetPointerAddress(_BaseAddress + 0x012CC25C, new[] {0x60, 0x54});

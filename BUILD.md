@@ -10,7 +10,9 @@ Both variants are produced automatically by `.github/workflows/build.yml` on a
 
 Either `.exe` needs its sibling DLLs, `BusinessTourMod.exe.config`, Windows and
 .NET Framework 4.7.2. Ready-to-use archives: `BusinessTourMod-Release.zip` and
-`BusinessTourMod-Clean-Release.zip`.
+`BusinessTourMod-Clean-Release.zip`. Both archives contain `run.bat` (diagnostic
+launcher) and `RUN.md` (troubleshooting); runtime errors are written to
+`startup-error.log` next to the executable.
 
 ## Locally (Visual Studio / MSBuild on Windows)
 

@@ -50,6 +50,8 @@ jobs:
           New-Item -ItemType Directory -Force -Path $out | Out-Null
           Get-ChildItem $out -File | Remove-Item -Force
           Get-ChildItem bin\Release -File | ForEach-Object { Copy-Item $_.FullName -Destination $out -Force }
+          Copy-Item tools\run.bat -Destination $out -Force
+          Copy-Item RUN.md -Destination $out -Force
           $hash = (Get-FileHash "$out\BusinessTourMod.exe" -Algorithm SHA256).Hash
           "Built on windows-2022 with MSBuild, Configuration=Release, Platform=Any CPU`r`nVariant: ORIGINAL (whitelist + anti-debug included)`r`nBusinessTourMod.exe SHA256: $hash`r`nCommit: $env:GITHUB_SHA" | Set-Content "$out\BUILD_INFO.txt"
           Compress-Archive -Path "$out\*" -DestinationPath "$out\BusinessTourMod-Release.zip" -Force
@@ -70,6 +72,8 @@ jobs:
           New-Item -ItemType Directory -Force -Path $out | Out-Null
           Get-ChildItem $out -File | Remove-Item -Force
           Get-ChildItem bin\Release -File | ForEach-Object { Copy-Item $_.FullName -Destination $out -Force }
+          Copy-Item tools\run.bat -Destination $out -Force
+          Copy-Item RUN.md -Destination $out -Force
           $hash = (Get-FileHash "$out\BusinessTourMod.exe" -Algorithm SHA256).Hash
           "Built on windows-2022 with MSBuild, Configuration=Release, Platform=Any CPU`r`nVariant: CLEAN (CLEAN_BUILD symbol defined)`r`nBusinessTourMod.exe SHA256: $hash`r`nCommit: $env:GITHUB_SHA" | Set-Content "$out\BUILD_INFO.txt"
           "Business Tour Mod - CLEAN build`r`n================================`r`nCompiled with the CLEAN_BUILD symbol. Removed at compile time:`r`n  * the SteamID whitelist HTTP request to goguardian.ml (Program.cs)`r`n  * the anti-debug / anti-analysis background worker (SecurityChecks.cs, GUI.cs, Designer.cs)`r`nEverything else (WinForms UI, memory reading/writing) is unchanged.`r`nThe original, unmodified build is in ..\build-output.`r`nRequires Windows + .NET Framework 4.7.2 + a running BusinessTour game." | Set-Content "$out\README.txt"
